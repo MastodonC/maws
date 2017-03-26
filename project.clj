@@ -9,5 +9,8 @@
                  [org.clojure/tools.cli "0.3.5"]]
   :main ^:skip-aot aws-cfg-gen.core
   :target-path "target/%s"
-  :profiles {:uberjar {:aot :all}}
+  :profiles {:uberjar {:aot :all}
+             :dev {:plugins [[lein-binplus "0.6.2"]]}}
+  :bin {:name "aws-cfg-gen"
+        :bin-path "~/bin"}
   )

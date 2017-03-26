@@ -1,7 +1,8 @@
 (ns aws-cfg-gen.cli-plus
   (:require [clojure.set :as set]
             [clojure.string :as string]
-            [clojure.tools.cli :refer [parse-opts] :as cli]))
+            [clojure.tools.cli :refer [parse-opts] :as cli]
+            [clojure.test :refer [function?]]))
 
 ;; Extend parse-opts to include actions and mandatory options
 ;; Get this reviewed especially the building up of the map
@@ -12,8 +13,10 @@
   parse-opts map."
   [action options options+]
   (let [{:keys [required-options
-                valid-actions]} options+
+                actions]} options+
+        valid-actions (set (map name (keys actions)))
         result {:action+ nil
+                :action-fn+ nil
                 :missing-options+ nil
                 :errors+ nil
                 :summary+ nil}]
@@ -24,6 +27,12 @@
                     (assoc x :errors+
                            (into []
                                  (conj (:errors+ x) (str "Invalid action: " action)))))
+                  x))
+        (as-> x (if (not-empty (x :action+))
+                  ;;(if (function? (actions (keyword action)))
+                    (assoc x :action-fn+ (actions (keyword action)))
+                  ;;  (assoc x :errors+
+                  ;;         (into [] (conj (x :errors+) (str "No action function to dispatch to: " action)))))
                   x))
         (assoc :missing-options+
                (into []
@@ -48,7 +57,8 @@
                             (string/join "\n"))
                        [])]
                     (flatten)
-                    (string/join "\n"))))))
+                    (string/join "\n")))
+        )))
 
 (defn error-msg [errors]
   (str "The following errors occurred parsing the cli:\n\n"
@@ -84,17 +94,21 @@
                                          :in-order true
                                          :strict true)
            action (first arguments)
-           {:keys [missing-options+
-                   action+
+           {:keys [action+
+                   action-fn+
+                   missing-options+
                    errors+
-                   summary+]} (parse-opts+ action options cli-options+)]
+                   summary+
+                   ]} (parse-opts+ action options cli-options+)]
        (if (nil? (cond
                    (:help options) (exit 0 (cli-summary action summary summary+))
                    errors (exit 1 (error-msg errors))
                    errors+ (exit 1 (error-msg errors+))
-                   (not action+) (exit 0 (cli-summary nil summary summary+))
-                   (not (resolve (symbol action+))) (exit 2 (str "No function to dispatch the action (" action+ ") to."))))
-         (apply (resolve (symbol action+)) options (rest arguments))
+                   (not action+) (exit 0 (cli-summary nil summary summary+))))
+                   ;;(not (resolve (symbol action+))) (exit 2 (str "No function to dispatch the action (" action+ ") to."))))
+                   ;;(not action-fn+) (exit 2 (str "No function to dispatch the action (" action+ ") to."))))
+         (apply action-fn+ options (rest arguments))
+         ;;(print action-fn+)
          (print (str "System/exit"))))))
    ([cli-options cli-options+ option-fn]
     (fn [top-level-options & args]
@@ -105,8 +119,9 @@
                                           :in-order true
                                           :strict true)
             action (first arguments)
-            {:keys [missing-options+
-                    action+
+            {:keys [action+
+                    action-fn+
+                    missing-options+
                     errors+
                     summary+]} (parse-opts+ action options cli-options+)]
         (if (nil? (cond
