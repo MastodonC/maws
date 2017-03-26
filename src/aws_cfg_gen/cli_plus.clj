@@ -66,8 +66,7 @@
 
 (defn exit [status msg]
   (println msg)
-  "System/exit"
-  ;;(System/exit status)
+  (System/exit status)
 )
 
 (defn cli-summary
@@ -105,10 +104,7 @@
                    errors (exit 1 (error-msg errors))
                    errors+ (exit 1 (error-msg errors+))
                    (not action+) (exit 0 (cli-summary nil summary summary+))))
-                   ;;(not (resolve (symbol action+))) (exit 2 (str "No function to dispatch the action (" action+ ") to."))))
-                   ;;(not action-fn+) (exit 2 (str "No function to dispatch the action (" action+ ") to."))))
          (apply action-fn+ options (rest arguments))
-         ;;(print action-fn+)
          (print (str "System/exit"))))))
    ([cli-options cli-options+ option-fn]
     (fn [top-level-options & args]
