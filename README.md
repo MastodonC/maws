@@ -1,36 +1,18 @@
 # aws-cfg-gen
 
-FIXME: description
+Tooling around managing access to AWS accounts.  Especially wrt federated accounts.
 
 ## Installation
 
-Download from http://example.com/FIXME.
+A `lein bin` will install a full executable to `~/bin`.
 
 ## Usage
 
-FIXME: explanation
+To see options and actions:
 
-    $ java -jar aws-cfg-gen-0.1.0-standalone.jar [args]
-
-## Options
-
-FIXME: listing of options this app accepts.
-
-## Examples
-
-...
-
-### Bugs
-
-...
-
-### Any Other Sections
-### That You Think
-### Might be Useful
+    aws-cfg-gen -h
 
 ## License
-
-Copyright © 2017 FIXME
 
 Distributed under the Eclipse Public License either version 1.0 or (at
 your option) any later version.

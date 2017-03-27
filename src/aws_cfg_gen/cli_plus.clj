@@ -11,45 +11,50 @@
 ;;   (def main-cli-options
 ;;     [["-h" "--help"]])
 ;;
-;; Create a handler to deal with options.  The output handler should
-;; be any options that will be passed to the next action
+;; Create a handler to deal with options.  The output of the handler
+;; should be any options that will be passed to the next action
 ;;
 ;;   (defn main-cli-handler [options]
 ;;     ...do stuff...
-;;     options
+;;     remaining-options
 ;;     )
 ;;
-;; Create the options+
+;; Define the extend options+
 ;;
 ;; (def main-cli-options+
-;;   {:required-options #{config}
-;;    :actions {:generate generate ;; futher cli parsers to call
-;;              :add-account add-account
-;;              :display display}
-;;    :options-fn main-cli-handler})
+;;   {:required-options #{config} ;; set of required options for an action
+;;    :actions {:generate generate-parser ;; cli parser to call for an action
+;;              :add-account add-account-parser
+;;              :display display-parser}
+;;    :options-fn main-cli-handler ;; handler to deal with options})
 ;;
 ;; Then create the cli parser
 ;;
 ;; (def main-parser (create-cli-parser main-cli-options main-cli-options+))
 ;;
 ;; The parsers expect as the first argument any pre-set options. Thus
-;; if we did:
+;; if we had main above an generate parser like so:
 ;;
+;; (def generate-cli-options...)
+;; (def generate-cli-handler..)
+;; (def generate-cli-options+..)
 ;; (def generate-parser (create-cli-parser generate-cli-options generate-cli-options+)
 ;;
-;; (defn (-main [ & args]
+;; Then
+;;
+;; (defn (-main [& args]
 ;;    (apply main-parser {} args)
 ;;
-;; We can call the program with:
+;; And we can call the program with:
 ;;
 ;;   program -c generate -i 2344 -n matt push --up  ...
 ;;
 
 (defn parse-opts+
   "Take an action (may be nil), the set of options from parse-opts,
-  and the opts+ spec to determine if the action is a valid one and all required
-  options to an action are present. Generate a map for a result similar to the
-  parse-opts map."
+  and the opts+ spec to determine if the action is needed, vlaid and all
+  required options to an action are present. Generate a map for a result similar
+  to the parse-opts map."
   [action options options+]
   (let [{:keys [required-options actions options-fn]} options+
         result {:action+ nil
@@ -59,44 +64,49 @@
                 :options-fn+ options-fn
                 :errors+ nil
                 :summary+ nil}]
+    ;; Is this the best way to create the result map?
     (as-> result x
-        (if (not-empty action)
-          (if (contains? (:actions+ x) action)
-            (assoc x :action+ action)
-            (assoc x :errors+
-                   (into []
-                         (conj (:errors+ x) (str "Invalid action: " action)))))
-          x)
-        (if (not-empty (x :action+))
-          (if (function? (actions (keyword action)))
-            (assoc x :action-fn+ (actions (keyword action)))
-            (assoc x :errors+
-                   (into [] (conj (x :errors+) (str "No action function to dispatch to: " action)))))
-          x)
-        (assoc x :missing-options+
-               (into []
-                     (set/difference required-options (keys options))))
-        (if (not-empty (:missing-options+ x))
+      ;; Action in Actions?
+      (if (not-empty action)
+        (if (contains? (:actions+ x) action)
+          (assoc x :action+ action)
           (assoc x :errors+
                  (into []
-                       (conj (x :errors+)
-                             (str "Missing required options: "
-                                  (string/join ", " (map (comp (partial str "--") name) (:missing-options+ x)))))))
-          x)
-        (assoc x :summary+
-               (->> [(if (not-empty (:actions+ x))
-                       (->> ["Actions"
-                             (string/join "\n" (map #(str "  " %) (:actions+ x)))]
-                            (string/join "\n"))
-                       [])
-                     (if (not-empty required-options)
-                       (->> ["Required Options"
-                             (string/join "\n" (map #(str "  --" %) (map name required-options)))
-                             ""]
-                            (string/join "\n"))
-                       [])]
-                    (flatten)
-                    (string/join "\n"))))))
+                       (conj (:errors+ x) (str "Invalid action: " action)))))
+        x)
+      ;; Action dispatcher function exists?
+      (if (not-empty (x :action+))
+        (if (function? (actions (keyword action)))
+          (assoc x :action-fn+ (actions (keyword action)))
+          (assoc x :errors+
+                 (into [] (conj (x :errors+) (str "No action function to dispatch to: " action)))))
+        x)
+      ;; Generate Missing options if any
+      (assoc x :missing-options+
+             (into []
+                   (set/difference required-options (keys options))))
+      (if (not-empty (:missing-options+ x))
+        (assoc x :errors+
+               (into []
+                     (conj (x :errors+)
+                           (str "Missing required options: "
+                                (string/join ", " (map (comp (partial str "--") name) (:missing-options+ x)))))))
+        x)
+      ;; Generate Summary
+      (assoc x :summary+
+             (->> [(if (not-empty (:actions+ x))
+                     (->> ["Actions"
+                           (string/join "\n" (map #(str "  " %) (:actions+ x)))]
+                          (string/join "\n"))
+                     [])
+                   (if (not-empty required-options)
+                     (->> ["Required Options"
+                           (string/join "\n" (map #(str "  --" %) (map name required-options)))
+                           ""]
+                          (string/join "\n"))
+                     [])]
+                  (flatten)
+                  (string/join "\n"))))))
 
 (defn error-msg [errors]
   (str "The following errors occurred parsing the cli:\n\n"
