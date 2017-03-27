@@ -6,7 +6,9 @@
   :exclusions [[org.clojure/clojure]]
   :dependencies [[org.clojure/clojure "1.8.0"]
                  [clj-uuid "1.0.0"]
-                 [org.clojure/tools.cli "0.3.5"]]
+                 [org.clojure/tools.cli "0.3.5"]
+                 [amazonica "0.3.94"]
+                 [cljstache "2.0.0"]]
   :main ^:skip-aot aws-cfg-gen.core
   :target-path "target/%s"
   :profiles {:uberjar {:aot :all}
