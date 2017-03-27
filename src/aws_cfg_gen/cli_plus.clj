@@ -4,50 +4,89 @@
             [clojure.tools.cli :refer [parse-opts] :as cli]
             [clojure.test :refer [function?]]))
 
-;; Extend parse-opts to include actions and mandatory options
-;; Get this reviewed especially the building up of the map
+;; Extend parse-opts to include actions and mandatory options.
+;; Also provide helper functions to create the cli parsers.
+;; Define options in the normal way:
+;;
+;;   (def main-cli-options
+;;     [["-h" "--help"]])
+;;
+;; Create a handler to deal with options.  The output handler should
+;; be any options that will be passed to the next action
+;;
+;;   (defn main-cli-handler [options]
+;;     ...do stuff...
+;;     options
+;;     )
+;;
+;; Create the options+
+;;
+;; (def main-cli-options+
+;;   {:required-options #{config}
+;;    :actions {:generate generate ;; futher cli parsers to call
+;;              :add-account add-account
+;;              :display display}
+;;    :options-fn main-cli-handler})
+;;
+;; Then create the cli parser
+;;
+;; (def main-parser (create-cli-parser main-cli-options main-cli-options+))
+;;
+;; The parsers expect as the first argument any pre-set options. Thus
+;; if we did:
+;;
+;; (def generate-parser (create-cli-parser generate-cli-options generate-cli-options+)
+;;
+;; (defn (-main [ & args]
+;;    (apply main-parser {} args)
+;;
+;; We can call the program with:
+;;
+;;   program -c generate -i 2344 -n matt push --up  ...
+;;
+
 (defn parse-opts+
   "Take an action (may be nil), the set of options from parse-opts,
   and the opts+ spec to determine if the action is a valid one and all required
   options to an action are present. Generate a map for a result similar to the
   parse-opts map."
   [action options options+]
-  (let [{:keys [required-options
-                actions]} options+
-        valid-actions (set (map name (keys actions)))
+  (let [{:keys [required-options actions options-fn]} options+
         result {:action+ nil
                 :action-fn+ nil
+                :actions+ (set (map name (keys actions)))
                 :missing-options+ nil
+                :options-fn+ options-fn
                 :errors+ nil
                 :summary+ nil}]
-    (-> result
-        (as-> x (if (not-empty action)
-                  (if (contains? valid-actions action)
-                    (assoc x :action+ action)
-                    (assoc x :errors+
-                           (into []
-                                 (conj (:errors+ x) (str "Invalid action: " action)))))
-                  x))
-        (as-> x (if (not-empty (x :action+))
-                  ;;(if (function? (actions (keyword action)))
-                    (assoc x :action-fn+ (actions (keyword action)))
-                  ;;  (assoc x :errors+
-                  ;;         (into [] (conj (x :errors+) (str "No action function to dispatch to: " action)))))
-                  x))
-        (assoc :missing-options+
+    (as-> result x
+        (if (not-empty action)
+          (if (contains? (:actions+ x) action)
+            (assoc x :action+ action)
+            (assoc x :errors+
+                   (into []
+                         (conj (:errors+ x) (str "Invalid action: " action)))))
+          x)
+        (if (not-empty (x :action+))
+          (if (function? (actions (keyword action)))
+            (assoc x :action-fn+ (actions (keyword action)))
+            (assoc x :errors+
+                   (into [] (conj (x :errors+) (str "No action function to dispatch to: " action)))))
+          x)
+        (assoc x :missing-options+
                (into []
                      (set/difference required-options (keys options))))
-        (as-> y (if (not-empty (y :missing-options+))
-                  (assoc y :errors+
-                         (into []
-                               (conj (y :errors+)
-                                     (str "Missing required options: "
-                                          (string/join ", " (map (comp (partial str "--") name) (y :missing-options+)))))))
-                  y))
-        (assoc :summary+
-               (->> [(if (not-empty valid-actions)
+        (if (not-empty (:missing-options+ x))
+          (assoc x :errors+
+                 (into []
+                       (conj (x :errors+)
+                             (str "Missing required options: "
+                                  (string/join ", " (map (comp (partial str "--") name) (:missing-options+ x)))))))
+          x)
+        (assoc x :summary+
+               (->> [(if (not-empty (:actions+ x))
                        (->> ["Actions"
-                             (string/join "\n" (map #(str "  " %) valid-actions))]
+                             (string/join "\n" (map #(str "  " %) (:actions+ x)))]
                             (string/join "\n"))
                        [])
                      (if (not-empty required-options)
@@ -57,8 +96,7 @@
                             (string/join "\n"))
                        [])]
                     (flatten)
-                    (string/join "\n")))
-        )))
+                    (string/join "\n"))))))
 
 (defn error-msg [errors]
   (str "The following errors occurred parsing the cli:\n\n"
@@ -66,7 +104,7 @@
 
 (defn exit [status msg]
   (println msg)
-  (System/exit status)
+  ;;(System/exit status)
 )
 
 (defn cli-summary
@@ -81,49 +119,26 @@
         ""]
        (string/join \newline)))
 
-(defn create-cli-handler
-  "With two option args we are dealing with action routing
-  with three options we are dealing with handling an actions options"
+(defn validate-args [cli-options cli-options+ args]
+  (let [{:keys [options arguments errors summary]} (parse-opts args cli-options :in-order true :strict true)
+        action (first arguments)
+        {:keys [action+ actions+ action-fn+ options-fn+ errors+ summary+]} (parse-opts+ action options cli-options+)]
+    (cond
+      (:help options) {:exit-message (cli-summary action summary summary+) :ok? true}
+      errors {:exit-message (error-msg errors)}
+      errors+ {:exit-message (error-msg errors+)}
+      (not options-fn+) {:exit-message (str "No option handler to dispatch to.")}
+      (and (not action+) (not-empty actions+)) {:exit-message (cli-summary nil summary summary+)}
+      :else {:action action+ :action-fn action-fn+ :options options :options-fn options-fn+ :arguments (rest arguments)})))
+
+(defn create-cli-parser
   ([cli-options cli-options+]
-   (fn [& args]
-     (let [{:keys [options
-                   arguments
-                   errors
-                   summary]} (parse-opts args cli-options
-                                         :in-order true
-                                         :strict true)
-           action (first arguments)
-           {:keys [action+
-                   action-fn+
-                   missing-options+
-                   errors+
-                   summary+
-                   ]} (parse-opts+ action options cli-options+)]
-       (if (nil? (cond
-                   (:help options) (exit 0 (cli-summary action summary summary+))
-                   errors (exit 1 (error-msg errors))
-                   errors+ (exit 1 (error-msg errors+))
-                   (not action+) (exit 0 (cli-summary nil summary summary+))))
-         (apply action-fn+ options (rest arguments))
-         (print (str "System/exit"))))))
-   ([cli-options cli-options+ option-fn]
-    (fn [top-level-options & args]
-      (let [{:keys [options
-                    arguments
-                    errors
-                    summary]} (parse-opts args cli-options
-                                          :in-order true
-                                          :strict true)
-            action (first arguments)
-            {:keys [action+
-                    action-fn+
-                    missing-options+
-                    errors+
-                    summary+]} (parse-opts+ action options cli-options+)]
-        (if (nil? (cond
-                    (:help options) (exit 0 (cli-summary action summary summary+))
-                    errors (exit 1 (error-msg errors))
-                    errors+ (exit 1 (error-msg errors+))
-                    (not option-fn) (exit 2 "No option function to dispatch to.")))
-          (option-fn (into options top-level-options))
-          (print (str "System/exit")))))))
+   (fn [options & args]
+     (let [{:keys [action-fn options options-fn exit-message ok? arguments]} (validate-args cli-options cli-options+ args)]
+       (if exit-message
+         (exit (if ok? 0 1) exit-message)
+         (if action-fn
+           (as-> options x
+             (options-fn x)
+             (apply action-fn x arguments))
+           (options-fn options)))))))

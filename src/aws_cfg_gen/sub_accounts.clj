@@ -1,4 +1,5 @@
 (ns aws-cfg-gen.sub-accounts
+  (:refer-clojure :exclude [read])
   (:require [uuid :refer [uuid]]
             [clojure.edn :as edn]
             [clojure.java.io :as io]
@@ -34,7 +35,7 @@
 (defn new
   "Create a new sa hash"
   [name id]
-  {(keyword name) {
-                   :external_id_ro (uuid)
-                   :external_id_rw (uuid)
-                   :id id}})
+  (pprint/pprint
+   {(keyword name) {:external_id_ro (uuid)
+                    :external_id_rw (uuid)
+                    :id id}}))
