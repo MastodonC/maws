@@ -8,7 +8,8 @@
                  [clj-uuid "1.0.0"]
                  [org.clojure/tools.cli "0.3.5"]
                  [amazonica "0.3.94"]
-                 [cljstache "2.0.0"]]
+                 [cljstache "2.0.0"]
+                 [aero "1.1.2"]]
   :main ^:skip-aot aws-cfg-gen.core
   :target-path "target/%s"
   :profiles {:uberjar {:aot :all}
