@@ -1,0 +1,4 @@
+{:users #include #join [#env HOME "/.aws/etc/users.edn"]
+ :groups #include #join [#env HOME "/.aws/etc/groups.edn"]
+ :accounts #include #join [#env HOME "/.aws/etc/accounts.edn"]
+ :roles #include #join [#env HOME "/.aws/etc/roles.edn"]}
