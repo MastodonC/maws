@@ -7,7 +7,11 @@
   :dependencies [[org.clojure/clojure "1.8.0"]
                  [clj-uuid "1.0.0"]
                  [org.clojure/tools.cli "0.3.5"]
-                 [amazonica "0.3.94"]
+                 [amazonica "0.3.94" :exclusions [com.amazonaws/aws-java-sdk
+                                                  com.amazonaws/amazon-kinesis-client]]
+                 [com.amazonaws/aws-java-sdk-core "1.11.109"]
+                 [com.amazonaws/aws-java-sdk-iam "1.11.109"]
+                 [com.amazonaws/aws-java-sdk-sts "1.11.109"]
                  [cljstache "2.0.0"]
                  [aero "1.1.2"]
                  [cheshire "5.7.0"]
