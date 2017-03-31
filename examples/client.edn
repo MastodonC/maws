@@ -1,0 +1,10 @@
+{;; this file should be installed to ~/.aws/etc/client.edn
+ :user "kermit@muppets.com" ;; your root AWS account user name
+ :trusted-profile "theatre" ;; The profile name in ~/.aws/config for the AWS top-level root account
+ :trusted-account-id "165234343443
+ :trusted-role-readonly "TheatreReadOnly"
+ :trusted-role-admin "TheatreAdmin"
+ :account-ids {:theatre "13468443463"
+               :fraggle-prod "82374874734"
+               :fraggle-nonprod "234324565"
+               :sandpit "234524534"}}

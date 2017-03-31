@@ -1,4 +1,4 @@
-(ns aws-cfg-gen.cli-plus
+(ns maws.cli-plus
   (:require [clojure.set :as set]
             [clojure.string :as string]
             [clojure.tools.cli :refer [parse-opts] :as cli]

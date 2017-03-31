@@ -1,0 +1,4 @@
+{:theatre {:admin-profile "theatre-admin"
+             :account-id "165234343443"}
+ :fraggle-prod {:admin-profile "fraggle-prod-admin"}
+ :fraggle-nonprod{:admin-profile "fraggle-nonprod-admin"}}

@@ -1,4 +1,4 @@
-(defproject aws-cfg-gen "0.1.0-SNAPSHOT"
+(defproject maws "0.1.0-SNAPSHOT"
   :description "Generate AWS configuration files from EDN files"
   :url "http://example.com/FIXME"
   :license {:name "Eclipse Public License"
@@ -12,7 +12,7 @@
                  [aero "1.1.2"]
                  [cheshire "5.7.0"]
                  [clj-http "3.4.1"]]
-  :main ^:skip-aot aws-cfg-gen.core
+  :main ^:skip-aot maws.core
   :target-path "target/%s"
   :profiles {:uberjar {:aot :all}
              :dev {:plugins [[lein-binplus "0.6.2"]]}}

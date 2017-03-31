@@ -1,0 +1,24 @@
+{:theatre [{:name "TheatreReadOnly"
+               :trusted-account :theatre
+               :managed-policy-names ["ReadonlyAccess"]
+               :assume-role-policy-template "assume-role-policy"}
+              {:name "TheatreAdmin"
+               :trusted-account :theatre
+               :managed-policy-names ["AdministratorAccess"]
+               :assume-role-policy-template "assume-role-policy-mfa"}]
+ :fraggle-prod [{:name "TheatreReadOnly"
+               :trusted-account :theatre
+               :managed-policy-names ["ReadonlyAccess"]
+               :assume-role-policy-template "assume-role-policy"}
+              {:name "TheatreAdmin"
+               :trusted-account :theatre
+               :managed-policy-names ["AdministratorAccess"]
+               :assume-role-policy-template "assume-role-policy-mfa"}]
+ :fraggle-nonprod [{:name "TheatreReadOnly"
+                    :trusted-account :theatre
+                    :managed-policy-names ["ReadonlyAccess"]
+                    :assume-role-policy-template "assume-role-policy"}
+                   {:name "TheatreAdmin"
+                    :trusted-account :theatre
+                    :managed-policy-names ["AdministratorAccess"]
+                    :assume-role-policy-template "assume-role-policy-mfa"}]}

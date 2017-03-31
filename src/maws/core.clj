@@ -1,7 +1,7 @@
-(ns aws-cfg-gen.core
+(ns maws.core
   (:gen-class)
-  (:require [aws-cfg-gen.iam :as iam]
-            [aws-cfg-gen.cli-plus :refer [create-cli-parser parse-opts+]]))
+  (:require [maws.iam :as iam]
+            [maws.cli-plus :refer [create-cli-parser parse-opts+]]))
 
 ;; console options
 (def console-cli-options

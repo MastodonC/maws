@@ -1,6 +1,6 @@
-(ns aws-cfg-gen.core-test
+(ns maws.core-test
   (:require [clojure.test :refer :all]
-            [aws-cfg-gen.core :refer :all]))
+            [maws.core :refer :all]))
 
 (deftest a-test
   (testing "FIXME, I fail."

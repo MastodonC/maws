@@ -1,0 +1,8 @@
+{:global-groups {:ro [:piggy :kermit]
+                 :admin [:piggy]}
+ :theatre [{:name "theatre-ro"
+            :users [^:ref [:global-groups :ro]]
+            :managed-policy-names ["ReadonlyAccess"]}
+           {:name "theatre-admin"
+            :users [^:ref [:global-groups :admin]]
+            :managed-policy-names ["AdministratorAccess"]}]}
