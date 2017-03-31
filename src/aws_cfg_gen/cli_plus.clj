@@ -84,7 +84,7 @@
       ;; Generate Missing options if any
       (assoc x :missing-options+
              (into []
-                   (set/difference required-options (keys options))))
+                   (set/difference required-options (set (keys options)))))
       (if (not-empty (:missing-options+ x))
         (assoc x :errors+
                (into []
@@ -120,7 +120,7 @@
 (defn cli-summary
   "Display CLI summary info"
   [action summary summary+]
-  (->> [(str "Usage: aws-cfg-gen [options] " (if (nil? action) "[action]" action))
+  (->> [(str "Usage: maws [options] " (if (nil? action) "[action]" action))
         ""
         "Options:"
         summary

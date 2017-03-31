@@ -1,60 +1,97 @@
 (ns aws-cfg-gen.core
   (:gen-class)
-  (:require [aws-cfg-gen.sub-accounts :as sa]
+  (:require [aws-cfg-gen.iam :as iam]
             [aws-cfg-gen.cli-plus :refer [create-cli-parser parse-opts+]]))
 
-;; generate action
-;;
-;; (def generate-cli-options
-;;   [["-h" "--help"]])
+;; console options
+(def console-cli-options
+  [["-a" "--account ACCOUNT"]
+   ["-d" "--display-url"]
+   ["-h" "--help"]])
 
-;; action option handlers should return any unused or global options
-;; so that they may pass through.
-;; (defn generate-cli-handler [options]
-;;   options)
+(defn console-cli-handler [options]
+  (let [{:keys [account display-url]} options]
+    (if display-url
+      (iam/display-console-url account "ro")
+      (iam/open-browser account "ro"))))
 
-;; (def generate-cli-options+
-;;   {:required-options #{}
-;;    :actions {}
-;;    :options-fn generate-cli-handler})
+(def console-cli-options+
+  {:required-options #{:account}
+   :actions #{}
+   :options-fn console-cli-handler})
 
-;; (def generate-parser (create-cli-parser generate-cli-options generate-cli-options+))
+(def console-parser (create-cli-parser console-cli-options console-cli-options+))
 
-;; add-acccount action
-;;
-;; (def add-account-cli-options
-;;   [["-n" "--name NAME" "Name of AWS account"]
-;;    ["-i" "--id ID" "ID of AWS account"]
-;;    ["-h" "--help"]])
+;; console-admin options
+(def console-admin-cli-options
+  [["-a" "--account ACCOUNT"]
+   ["-m" "--mfa KEY"]
+   ["-d" "--display-url"]
+   ["-h" "--help"]])
 
-;; (defn add-account-cli-handler [options]
-;;   (do (print "Adding this:\n")
-;;       (sa/new (:name options) (:id options))))
+(defn console-admin-cli-handler [options]
+  (let [{:keys [account display-url mfa]} options]
+    (if display-url
+      (iam/display-console-url account "admin" mfa)
+      (iam/open-browser account "admin" mfa))))
 
-;; (def add-account-cli-options+
-;;   {:required-options #{:name :id}
-;;    :actions {}
-;;    :options-fn add-account-cli-handler})
+(def console-admin-cli-options+
+  {:required-options #{:account :mfa}
+   :actions #{}
+   :options-fn console-admin-cli-handler})
 
-;; (def add-account-parser (create-cli-parser add-account-cli-options add-account-cli-options+))
+(def console-admin-parser (create-cli-parser console-admin-cli-options console-admin-cli-options+))
 
-;; display-acccount action
-;;
-;; (def display-cli-options
-;;   [["-h" "--help"]])
+;; env options
+(def env-cli-options
+  [["-a" "--account ACCOUNT"]
+   ["-h" "--help"]])
 
-;; (defn display-cli-handler [options]
-;;   (sa/display sa/config-url))
+(defn env-cli-handler [options]
+  (let [{:keys [account]} options]
+    (iam/generate-env-values account "ro")))
 
-;; (def display-cli-options+
-;;   {:required-options #{}
-;;    :actions {}
-;;    :options-fn display-cli-handler})
+(def env-cli-options+
+  {:required-options #{:account}
+   :actions {}
+   :options-fn env-cli-handler})
 
-;; (def display-parser (create-cli-parser display-cli-options display-cli-options+))
+(def env-parser (create-cli-parser env-cli-options env-cli-options+))
+
+;; env-admin options
+(def env-admin-cli-options
+  [["-a" "--account ACCOUNT"]
+   ["-m" "--mfa KEY"]
+   ["-h" "--help"]])
+
+(defn env-admin-cli-handler [options]
+  (let [{:keys [account type mfa]} options]
+    (iam/generate-env-values account "admin" mfa)))
+
+(def env-admin-cli-options+
+  {:required-options #{:account :mfa}
+   :actions {}
+   :options-fn env-admin-cli-handler})
+
+(def env-admin-parser (create-cli-parser env-admin-cli-options env-admin-cli-options+))
+
+;; aliases options
+(def aliases-cli-options
+  [])
+
+(defn aliases-cli-handler [options]
+  (iam/generate-alias-values))
+
+(def aliases-cli-options+
+  {:required-options #{}
+   :actions {}
+   :options-fn aliases-cli-handler})
+
+(def aliases-parser (create-cli-parser aliases-cli-options aliases-cli-options+))
 
 ;; Top-level config or main
 ;;
+
 (def main-cli-options
   [["-h" "--help"]])
 
@@ -63,13 +100,15 @@
 
 (def main-cli-options+
   {:required-options #{}
-   :actions {;;:generate generate-parser
-             ;;:add-account add-account-parser
-             ;;:display display-parser
+   :actions {:console console-parser
+             :console-admin console-admin-parser
+             :env env-parser
+             :env-admin env-admin-parser
+             :aliases aliases-parser
              }
    :options-fn main-cli-handler})
 
 (def main-parser (create-cli-parser main-cli-options main-cli-options+))
 
 (defn -main [ & args ]
-  (apply main-parser {} args))
+  (apply main-parser "" args))
