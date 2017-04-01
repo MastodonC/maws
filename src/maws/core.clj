@@ -17,7 +17,7 @@
 
 (def console-cli-options+
   {:required-options #{:account}
-   :actions #{}
+   :actions {}
    :options-fn console-cli-handler})
 
 (def console-parser (create-cli-parser console-cli-options console-cli-options+))
@@ -37,7 +37,7 @@
 
 (def console-admin-cli-options+
   {:required-options #{:account :mfa}
-   :actions #{}
+   :actions {}
    :options-fn console-admin-cli-handler})
 
 (def console-admin-parser (create-cli-parser console-admin-cli-options console-admin-cli-options+))
@@ -111,4 +111,4 @@
 (def main-parser (create-cli-parser main-cli-options main-cli-options+))
 
 (defn -main [ & args ]
-  (apply main-parser "" args))
+  (apply main-parser {} args))

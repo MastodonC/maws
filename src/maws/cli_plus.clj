@@ -52,51 +52,19 @@
 
 (defn parse-opts+
   "Take an action (may be nil), the set of options from parse-opts,
-  and the opts+ spec to determine if the action is needed, vlaid and all
-  required options to an action are present. Generate a map for a result similar
+  and the opts+ spec to determine if the action is needed, valid and all
+  required options to an action are present. Return a map for a result similar
   to the parse-opts map."
   [action options options+]
   (let [{:keys [required-options actions options-fn]} options+
-        result {:action+ nil
-                :action-fn+ nil
-                :actions+ (set (map name (keys actions)))
-                :missing-options+ nil
-                :options-fn+ options-fn
-                :errors+ nil
-                :summary+ nil}]
-    ;; Is this the best way to create the result map?
-    (as-> result x
-      ;; Action in Actions?
-      (if (not-empty action)
-        (if (contains? (:actions+ x) action)
-          (assoc x :action+ action)
-          (assoc x :errors+
-                 (into []
-                       (conj (:errors+ x) (str "Invalid action: " action)))))
-        x)
-      ;; Action dispatcher function exists?
-      (if (not-empty (x :action+))
-        (if (function? (actions (keyword action)))
-          (assoc x :action-fn+ (actions (keyword action)))
-          (assoc x :errors+
-                 (into [] (conj (x :errors+) (str "No action function to dispatch to: " action)))))
-        x)
-      ;; Generate Missing options if any
-      (assoc x :missing-options+
-             (into []
-                   (set/difference required-options (set (keys options)))))
-      (if (not-empty (:missing-options+ x))
-        (assoc x :errors+
-               (into []
-                     (conj (x :errors+)
-                           (str "Missing required options: "
-                                (string/join ", " (map (comp (partial str "--") name) (:missing-options+ x)))))))
-        x)
-      ;; Generate Summary
-      (assoc x :summary+
-             (->> [(if (not-empty (:actions+ x))
+        actions+ (set (map name (keys actions)))
+        action+ (actions+ action)
+        invalid-action (not= action action+)
+        action-fn+ (actions (keyword action))
+        missing-options+ (set/difference required-options (set (keys options)))
+        summary+ (->> [(if (not-empty actions+)
                      (->> ["Actions"
-                           (string/join "\n" (map #(str "  " %) (:actions+ x)))]
+                           (string/join "\n" (map #(str "  " %) actions+))]
                           (string/join "\n"))
                      [])
                    (if (not-empty required-options)
@@ -106,7 +74,24 @@
                           (string/join "\n"))
                      [])]
                   (flatten)
-                  (string/join "\n"))))))
+                  (string/join "\n"))
+        errors (keep identity ;; remove nils
+                     [(if invalid-action
+                        (str "Invalid action: " action))
+                      (if (and action+ (not (function? action-fn+)))
+                        (str "No action function to dispatch to: " action))
+                      (if (not-empty missing-options+)
+                        (str "Missing required options: "
+                             (string/join ", " (map (comp (partial str "--") name) missing-options+))))
+                      ])
+        errors+ (if (not-empty errors) errors)]
+    {:action+ action+
+     :action-fn+ action-fn+
+     :actions+ actions+
+     :missing-options+ missing-options+
+     :options-fn+ options-fn
+     :errors+ errors+
+     :summary+ summary+}))
 
 (defn error-msg [errors]
   (str "The following errors occurred parsing the cli:\n\n"
@@ -120,7 +105,7 @@
 (defn cli-summary
   "Display CLI summary info"
   [action summary summary+]
-  (->> [(str "Usage: maws [options] " (if (nil? action) "[action]" action))
+  (->> [(str "Usage: maws [options] " (if (string/blank? action) "[action]" action))
         ""
         "Options:"
         summary
@@ -135,8 +120,8 @@
         {:keys [action+ actions+ action-fn+ options-fn+ errors+ summary+]} (parse-opts+ action options cli-options+)]
     (cond
       (:help options) {:exit-message (cli-summary action summary summary+) :ok? true}
-      errors {:exit-message (error-msg errors)}
-      errors+ {:exit-message (error-msg errors+)}
+      (not-empty errors) {:exit-message (error-msg errors)}
+      (not-empty errors+) {:exit-message (error-msg errors+)}
       (not options-fn+) {:exit-message (str "No option handler to dispatch to.")}
       (and (not action+) (not-empty actions+)) {:exit-message (cli-summary nil summary summary+)}
       :else {:action action+ :action-fn action-fn+ :options options :options-fn options-fn+ :arguments (rest arguments)})))

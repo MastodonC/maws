@@ -18,27 +18,19 @@
 ;; Account setup based functionality
 ;;
 
-;; A writer monad could be used to construct the actions to be performed.
-;; This would be a plan step. Running the computation would be an
-;; apply step ala Terraform.
-;;
-;; A reader monad would be useful to apply the configuration
-;; through-out all the steps but I've no idea about composing monads in
-;; this way.
-
 (defn config []
   (let [home (System/getProperty "user.home")
         config-url (str home "/.aws/etc/config.edn")]
     (read-config config-url)))
 
 (defn nick->user-name [config nick]
-  (((config :users) nick) :name))
+  (-> config :users nick :name))
 
 (defn account->admin-profile [config account]
-  (((:accounts config) account) :admin-profile))
+  (-> config :accounts account :admin-profile))
 
 (defn account->admin-id [config account]
-  (((config :accounts) account) :account-id))
+  (-> config :accounts account :account-id))
 
 (defn attach-group-policy [group-name managed-policy-name]
   (let [arn (str "arn:aws:iam::aws:policy/" managed-policy-name)]
@@ -48,16 +40,14 @@
 (defn add-user-to-group [group-name user-name]
   (do
     (println (str "Adding user " user-name " to " group-name))
-    (iam/add-user-to-group :group-name group-name :user-name user-name)
-    ))
+    (iam/add-user-to-group :group-name group-name :user-name user-name)))
 
 (defn create-group [config group]
   (let [{:keys [name users managed-policy-names]} group]
     (println (str "Creating group:" name))
     (iam/create-group :group-name name)
     (run! (partial attach-group-policy name) managed-policy-names)
-    (run! (partial add-user-to-group name) (map (partial nick->user-name config) (flatten users)))
-    ))
+    (run! (partial add-user-to-group name) (map (partial nick->user-name config) (flatten users)))))
 
 (defn create-account-groups [config account-group]
   (let [profile (account->admin-profile config (key account-group))
@@ -114,10 +104,6 @@
   (-> (System/getProperty "user.home")
       (str "/.aws/etc/client.edn")
       (read-config)))
-
-;; -> is special case of `let` where in which the value above is fed
-;; directly into the value below.  And `let` is the identity Monad.
-;; Everything is the same man.  MiNd BlOwN.
 
 (defn get-credentials [config account type & mfa]
   (let [{:keys [user trusted-profile trusted-account-id
@@ -199,38 +185,3 @@
                    ) accounts)
         (string/join)
         (println))))
-
-;; Monadic version of above
-;; Use a macro to send all exceptions to Nil for Maybe
-;; Losing the error though is not so useful!  Need an either monad.
-;;
-;; (defmacro try* [f]
-;;   `(try ~f (catch Exception e# nil)))
-;;
-;; (defn generate-console-url-m [credentials]
-;;   (domonad maybe-m
-;;            [:let [{:keys [access-key secret-key session-token expiration]} credentials]
-;;             session {:sessionId access-key
-;;                      :sessionKey secret-key
-;;                      :sessionToken session-token}
-;;             json-session (json/generate-string session)
-;;             signin-query-params {:Action "getSigninToken"
-;;                                  :SessionDuration 43200
-;;                                  :Session json-session}
-;;             signin-url "https://signin.aws.amazon.com/federation"
-;;             signin-response (try* (http/get signin-url {:query-params signin-query-params}))
-;;             body (signin-response :body)
-;;             signin-token (try* ((json/parse-string body true) :SigninToken))
-;;             request-query-params {:Action "login"
-;;                                   :Issuer ""
-;;                                   :Destination "https://console.aws.amazon.com/"
-;;                                   :SigninToken signin-token}
-;;             request-query-string (http/generate-query-string request-query-params)
-;;             request-url (str "https://signin.aws.amazon.com/federation?" request-query-string)]
-;;            request-url))
-;;
-;; (defn openbrowser [credentials]
-;;   (let [url (generate-console-url-credentials)]
-;;     (if url
-;;       (browse-url url)
-;;       (print "Error: Unable to generate credentials"))))
