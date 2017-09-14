@@ -123,6 +123,40 @@ Which will give
 
 Again you can wrap the output in an eval loop and use tab completion on `console-<TAB>` or `console-admin-<TAB>` to open up a browser.  Similar for env exporting `env-<TAB>` and `env-admin<TAB>`.
 
+# Adding a new Account for Federation
+
+Modify the `maws-etc` repo like this commit to add the appropriate data.
+
+https://github.com/MastodonC/maws-etc/commit/a6d11d10fdfbf51d325702382845393069ccea44
+
+Then in a `maws` REPL in the `maws.iam` namespace run
+
+```
+(create-account-roles (config) (first {:momondo-kafka [{:name "MastodoncReadOnly"
+                                                                  :trusted-account :mastodonc
+                                                                  :managed-policy-names ["ReadonlyAccess"]
+                                                                  :assume-role-policy-template "assume-role-policy"}
+                                                                 {:name "MastodoncAdmin"
+                                                                  :trusted-account :mastodonc
+                                                                  :managed-policy-names ["AdministratorAccess"]
+                                                                  :assume-role-policy-template "assume-role-policy-mfa"}]}))
+```
+
+Make sure to communicate out the `client.edn` account addition e.g
+
+```
+{:user "matt.ford@mastodonc.com" ;; your Mastodonc AWS account name
+ :trusted-profile "mastodonc" ;; The profile name in ~/.aws/config for the Mastodonc AWS account
+ :trusted-account-id "165664414043"
+ :trusted-role-readonly "MastodoncReadOnly"
+ :trusted-role-admin "MastodoncAdmin"
+ :account-ids {:mastodonc "165664414043"
+               :witan-prod "720433613167"
+               :est-nonprod "546282451595"
+               :mc-ops-sandpit "201352650455"
+               :NEWACCOUNT "095236449097"}}
+```
+
 ## Todo
 
 Cough Cough, ahem.
