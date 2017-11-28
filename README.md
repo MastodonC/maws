@@ -39,7 +39,11 @@ The second part is a client for users to either generate a set of temporary cred
 
 ## Client Installation
 
-A `lein bin` will install a full executable to `~/bin/maws`.
+The easiest way to install the client is to grab the binary from here:
+
+- https://github.com/MastodonC/maws/releases/download/v1.0/maws
+
+Alternately checkout the repo and run `lein bin` will install a full executable to `~/bin/maws`.
 
 Next you will need to setup `~/.aws/etc/client.edn`
 
@@ -55,8 +59,11 @@ Next you will need to setup `~/.aws/etc/client.edn`
                :sandpit "234524534"}}
 ```
 
-Ideally the list of accounts will be somewhere you can easily pull down the information.
+Ideally the list of accounts will be somewhere you can easily pull down the information.  For Mastodonc people that's here:-
 
+https://github.com/MastodonC/maws-etc/blob/master/client.edn
+
+Alter for your own user.
 
 ## Client Usage
 
