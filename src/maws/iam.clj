@@ -52,7 +52,7 @@
           (println (str "Group:" name " already exists, skipping"))
           (throw e))))
     (run! (partial attach-group-policy name) managed-policy-names)
-    (run! (partial add-user-to-group name) (map (partial nick->user-name config) (flatten users))) ()))
+    (run! (partial add-user-to-group name) (map (partial nick->user-name config) (flatten users)))))
 
 (defn create-account-groups [config account-group]
   (let [profile (account->admin-profile config (key account-group))
