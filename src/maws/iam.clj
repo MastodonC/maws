@@ -6,7 +6,7 @@
             [clojure.pprint :as pprint]
             [amazonica.aws.identitymanagement :as iam]
             [amazonica.aws.securitytoken :as sts]
-            [amazonica.core :refer [with-client-config with-credential]]
+            [amazonica.core :refer [with-client-config with-credential ex->map]]
             [cljstache.core :refer [render-resource]]
             [aero.core :refer (read-config)]
             [clojure.java.browse :refer (browse-url)]
@@ -45,7 +45,12 @@
 (defn create-group [config group]
   (let [{:keys [name users managed-policy-names]} group]
     (println (str "Creating group:" name))
-    (iam/create-group :group-name name)
+    (try
+      (iam/create-group :group-name name)
+      (catch Exception e
+        (if (= (:error-code (ex->map e)) "EntityAlreadyExists")
+          (println (str "Group:" name " already exists, skipping"))
+          (throw e))))
     (run! (partial attach-group-policy name) managed-policy-names)
     (run! (partial add-user-to-group name) (map (partial nick->user-name config) (flatten users)))))
 
@@ -53,10 +58,27 @@
   (let [profile (account->admin-profile config (key account-group))
         groups (val account-group)]
     (with-credential {:profile profile}
-      (run! (partial create-group config) groups))))
+                     (run! (partial create-group config) groups))))
 
-(defn create-groups [config]
-  (let [account-groups (dissoc (config :groups) :global-groups)]
+(defn create-user [user password]
+  "Use this in the REPL to create a user that doesn't already exist"
+  (let [profile (account->admin-profile (config) :mastodonc)]
+    (with-credential {:profile profile}
+                     (iam/create-user :user-name user)
+                     (pprint/pprint (iam/create-access-key :user-name user))
+                     (iam/create-login-profile :user-name user
+                                               :password password
+                                               :password-reset-required true)
+                     (println (str "Console URL:"
+                                   "  https://mastodonc.signin.aws.amazon.com/console"
+                                   "Ask the user to create an MFA login then point them at MAWS"
+                                   "  https://github.com/MastodonC/maws#client-installation"
+                                   "  https://github.com/MastodonC/maws-etc/blob/master/client.edn")))))
+
+(defn create-groups []
+  "Use this in the REPL to create or update the groups to which users belong"
+  (let [config (config)
+        account-groups (dissoc (config :groups) :global-groups)]
     (run! (partial create-account-groups config) account-groups)))
 
 (defn attach-role-policy [role-name managed-policy-name]
@@ -78,7 +100,7 @@
         roles (val account-roles)]
     (println (str "In account: " (name (key account-roles))))
     (with-credential {:profile profile}
-      (run! (partial create-role config) roles))))
+                     (run! (partial create-role config) roles))))
 
 (defn create-roles [config]
   (let [account-roles (config :roles)]
@@ -88,13 +110,13 @@
   ;; For now we assume the account name is also the account alias
   (let [account-roles (config :roles)]
     (run! (fn [account-role]
-           (let [account (name (key account-role))
-                 roles (val account-role)]
-             (run! (fn [role]
-                    (let [role-name (role :name)]
-                      (println (str "https://signin.aws.amazon.com/switchrole?account="
-                                    account "&roleName=" role-name))))
-                   roles))) account-roles)))
+            (let [account (name (key account-role))
+                  roles (val account-role)]
+              (run! (fn [role]
+                      (let [role-name (role :name)]
+                        (println (str "https://signin.aws.amazon.com/switchrole?account="
+                                      account "&roleName=" role-name))))
+                    roles))) account-roles)))
 
 ;;
 ;; Client functionality
@@ -117,27 +139,27 @@
         mfa-device-serial-number (str "arn:aws:iam::" trusted-account-id ":mfa/" user)
         mfa-token (first mfa)
         ar (with-credential {:profile trusted-profile}
-             (if mfa-token
-               (sts/assume-role :role-arn role-arn :role-session-name account
-                                :serial-number mfa-device-serial-number :token-code mfa-token)
-               (sts/assume-role :role-arn role-arn :role-session-name account)))
+                            (if mfa-token
+                              (sts/assume-role :role-arn role-arn :role-session-name account
+                                               :serial-number mfa-device-serial-number :token-code mfa-token)
+                              (sts/assume-role :role-arn role-arn :role-session-name account)))
         credentials (ar :credentials)]
     credentials))
 
 (defn generate-console-url [credentials]
   (let [{:keys [access-key secret-key session-token expiration]} credentials
-        session {:sessionId access-key
-                 :sessionKey secret-key
+        session {:sessionId    access-key
+                 :sessionKey   secret-key
                  :sessionToken session-token}
         json-session (json/generate-string session)
-        signin-query-params {:Action "getSigninToken"
-                             :SessionDuration 43200 ;; 12 hours for console
-                             :Session json-session}
+        signin-query-params {:Action          "getSigninToken"
+                             :SessionDuration 43200         ;; 12 hours for console
+                             :Session         json-session}
         signin-url "https://signin.aws.amazon.com/federation"
         signin-response (http/get signin-url {:query-params signin-query-params})
         signin-token ((json/parse-string (signin-response :body) true) :SigninToken)
-        request-query-params {:Action "login"
-                              :Issuer ""
+        request-query-params {:Action      "login"
+                              :Issuer      ""
                               :Destination "https://console.aws.amazon.com/"
                               :SigninToken signin-token}
         request-query-string (http/generate-query-string request-query-params)
@@ -162,11 +184,11 @@
   (-> (federated-config)
       (get-credentials account type (first mfa))
       (as-> credentials
-          (let [{:keys [access-key secret-key session-token expiration]} credentials]
-            (str "export AWS_ACCESS_KEY_ID=" access-key ";\n"
-                 "export AWS_SECRET_ACCESS_KEY=" secret-key ";\n"
-                 "export AWS_SESSION_TOKEN=" session-token ";\n"
-                 "export AWS_SECURITY_TOKEN=" session-token ";\n" )))
+            (let [{:keys [access-key secret-key session-token expiration]} credentials]
+              (str "export AWS_ACCESS_KEY_ID=" access-key ";\n"
+                   "export AWS_SECRET_ACCESS_KEY=" secret-key ";\n"
+                   "export AWS_SESSION_TOKEN=" session-token ";\n"
+                   "export AWS_SECURITY_TOKEN=" session-token ";\n")))
       (println)))
 
 (defn generate-alias-values
