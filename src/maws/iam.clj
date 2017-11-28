@@ -77,9 +77,9 @@
 
 (defn create-groups []
   "Use this in the REPL to create or update the groups to which users belong"
-  (let [config (config)]
-    (let [account-groups (dissoc (config :groups) :global-groups)]
-      (run! (partial create-account-groups config) account-groups))))
+  (let [config (config)
+        account-groups (dissoc (config :groups) :global-groups)]
+    (run! (partial create-account-groups config) account-groups)))
 
 (defn attach-role-policy [role-name managed-policy-name]
   (let [arn (str "arn:aws:iam::aws:policy/" managed-policy-name)]
