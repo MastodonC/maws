@@ -157,6 +157,19 @@ Make sure to communicate out the `client.edn` account addition e.g
                :NEWACCOUNT "095236449097"}}
 ```
 
+# Adding a new User
+
+Modify the `maws-etc` repo to add the user to groups appropriately.  See this commit for an example:
+
+https://github.com/MastodonC/maws-etc/commit/dea6a89049b5c49f29be5facf61f40d1bf5eab8c?w=1
+
+In a `maws` REPL run
+
+```clojure
+(create-user "username" "password")
+(create-groups)
+```
+
 ## Todo
 
 Cough Cough, ahem.
