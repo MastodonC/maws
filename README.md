@@ -10,11 +10,17 @@ Tooling around managing access to AWS accounts.  Especially wrt federated accoun
 
 * This is all early days - here be dragons *
 
-To manage your AWS estate it is best practice to have a top-level or root level AWS account which pretty much does nothing except be the end-point for consolidated billing, be the place you buy reserved instances, and manage users and groups via IAM.
+To manage your AWS estate it is best practice to have a top-level or
+root level AWS account which pretty much does nothing except be the
+end-point for consolidated billing, be the place you buy reserved
+instances, and manage users and groups via IAM.
 
-You then create sub-accounts in which your infrastructure resides organized how you see fit.  Typically per-largish-project and again split based on whether it's prod or non-prod.
+You then create sub-accounts in which your infrastructure resides
+organized how you see fit.  Typically per-largish-project and again
+split based on whether it's prod or non-prod.
 
-Having users in the root account allows single-sign-on across all the sub-accounts if federated roles are correctly setup.
+Having users in the root account allows single-sign-on across all the
+sub-accounts if federated roles are correctly setup.
 
 ```
 Dancingfrog Root AWS account
@@ -33,9 +39,15 @@ Dancingfrog Root AWS account
 
 There are two parts to this code base.
 
-A set of functions that setup and manage users, groups and roles.  At present these are called from the REPL.  They work across multiple accounts and will create suitable federated roles for your users to use.  See `dancingfrog/etc` in the `examples/` dir for how a configuration may look.
+A set of functions that setup and manage users, groups and roles.  At
+present these are called from the REPL.  They work across multiple
+accounts and will create suitable federated roles for your users to
+use.  See `dancingfrog/etc` in the `examples/` dir for how a
+configuration may look.
 
-The second part is a client for users to either generate a set of temporary credentials they can export to use on the command line or open a console window for the accounts they wish to use.
+The second part is a client for users to either generate a set of
+temporary credentials they can export to use on the command line or
+open a console window for the accounts they wish to use.
 
 ## Client Installation
 
@@ -59,7 +71,8 @@ Next you will need to setup `~/.aws/etc/client.edn`
                :sandpit "234524534"}}
 ```
 
-Ideally the list of accounts will be somewhere you can easily pull down the information.  For Mastodonc people that's here:-
+Ideally the list of accounts will be somewhere you can easily pull
+down the information.  For Mastodonc people that's here:-
 
 https://github.com/MastodonC/maws-etc/blob/master/client.edn
 
@@ -92,7 +105,9 @@ The federation is typically setup so that full Administrative access requires MF
 
 ### Exporting Environment Vars
 
-A lot of tooling uses ENV vars to configure the connection to AWS.  Federated credentials work to this also.  These credentials are limited by Amazon to maximum duration of 1hour.
+A lot of tooling uses ENV vars to configure the connection to AWS.
+Federated credentials work to this also.  These credentials are
+limited by Amazon to maximum duration of 1hour.
 
 You can generate read only credentials with
 
